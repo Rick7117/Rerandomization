@@ -15,13 +15,12 @@ def Xs_generator(rowNum, colNum):
     return df
 
 
-def Ys_generator(Xs, Ws, tau):
+def Ys_generator(Xs, Ws, tau, desired_norm = 10):
 
     rowNum, colNum = Xs.shape
 
     beta1 = [np.random.uniform(-1, 1) for i in range(colNum)]
     beta_norm2 = np.linalg.norm(beta1)
-    desired_norm = 10
     beta1 = beta1 / beta_norm2 * desired_norm
 
     beta0 = np.random.uniform(-1, 1)
@@ -46,10 +45,6 @@ def Ws_generator_equal_size(df):
 
     return vector
 
-# 待重构
-# def tau_hat_calculator(Ys_0, Ys_1, Ws):
-#     return (Ys_1 @ Ws) / np.sum(Ws) - (Ys_0 @ (1 - Ws)) / np.sum(1 - Ws)
-
 def tau_hat_calculator(df, Ws):
     Ys = df['y']
     return (Ys @ Ws) / np.sum(Ws) - (Ys @ (1 - Ws)) / np.sum(1 - Ws)
@@ -63,7 +58,8 @@ def diff_T_C_calculator(Xs, Ws):
     return Xs @ (Ws - np.ones(n) * pw) / (n * pw * (1 - pw))
 
 # 待重构
-def Mahalanobis_distance(Xs, Ws):
+def Mahalanobis_distance(df, Ws):
+    
     cov_X = np.cov(Xs)
     n = len(Ws)
     pw = np.sum(Ws) / n

@@ -17,7 +17,8 @@ def Xs_generator(rowNum, colNum):
 
 def Ys_generator(Xs, Ws, tau, desired_norm = 10):
 
-    rowNum, colNum = Xs.shape
+    df = Xs.copy()
+    rowNum, colNum = df.shape
 
     beta1 = [np.random.uniform(-1, 1) for i in range(colNum)]
     beta_norm2 = np.linalg.norm(beta1)
@@ -27,10 +28,10 @@ def Ys_generator(Xs, Ws, tau, desired_norm = 10):
     eps = np.random.normal(0, 0.25, rowNum)
     Ys = beta0 + np.dot(Xs, beta1) + tau * Ws + eps
 
-    Xs['w'] = Ws
-    Xs['y'] = Ys
+    df['w'] = Ws
+    df['y'] = Ys
     
-    return(Xs)
+    return(df)
 
 def Ws_generator_equal_size(df):
 
@@ -58,12 +59,14 @@ def diff_T_C_calculator(Xs, Ws):
     return Xs @ (Ws - np.ones(n) * pw) / (n * pw * (1 - pw))
 
 # 待重构
-def Mahalanobis_distance(df, Ws):
+def Mahalanobis_distance(Xs, Ws):
     
-    cov_X = np.cov(Xs)
+    cov_X = Xs.cov
     n = len(Ws)
     pw = np.sum(Ws) / n
-    diff_T_C = Xs @ (Ws - np.ones(n) * pw) / (n * pw * (1 - pw))
+    diff_T_C = Xs @ (Ws - np.ones(n) * pw) / (n * pw * (1 - pw)) # 存在bug
+    print(diff_T_C.shape)
+    print(cov_X.shape)
     
     try:
         M = n*pw*(1-pw) * diff_T_C.T @ np.linalg.inv(cov_X) @ diff_T_C

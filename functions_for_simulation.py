@@ -2,9 +2,22 @@
 
 import numpy as np
 import pandas as pd
+import scipy as sc
 from scipy import stats
 import matplotlib.pyplot as plt
 
+
+def is_positive_definite(matrix):
+    # Check if the matrix is symmetric
+    if not np.allclose(matrix, matrix.T):
+        return False
+    
+    # Check if all eigenvalues are positive
+    eigenvalues, _ = np.linalg.eig(matrix)
+    if np.all(eigenvalues > 0):
+        return True
+    else:
+        return False
 
 def Xs_generator(rowNum, colNum):
     mus = np.zeros(colNum)
@@ -15,7 +28,7 @@ def Xs_generator(rowNum, colNum):
     return df
 
 
-def Ys_generator(Xs, Ws, tau, desired_norm = 10):
+def Ys_generator(Xs, Ws, tau=0.8, desired_norm = 10):
 
     df = Xs.copy()
     rowNum, colNum = df.shape
@@ -33,9 +46,9 @@ def Ys_generator(Xs, Ws, tau, desired_norm = 10):
     
     return(df)
 
-def Ws_generator_equal_size(df):
+def Ws_generator_equal_size(Xs):
 
-    rowNum= df.shape[0]
+    rowNum = Xs.shape[0]
 
     if rowNum % 2 != 0:
         raise ValueError("The input number rowNum must be an even number.")
@@ -51,54 +64,56 @@ def tau_hat_calculator(df, Ws):
     return (Ys @ Ws) / np.sum(Ws) - (Ys @ (1 - Ws)) / np.sum(1 - Ws)
 
 
-# 待重构
-def diff_T_C_calculator(Xs, Ws):
-    cov_X = np.cov(Xs)
-    n = len(Ws)
-    pw = np.sum(Ws) / n
-    return Xs @ (Ws - np.ones(n) * pw) / (n * pw * (1 - pw))
+# # 待重构
+# def diff_T_C_calculator(Xs, Ws):
+#     cov_X = np.cov(Xs)
+#     n = len(Ws)
+#     pw = np.sum(Ws) / n
+#     return Xs.T @ (Ws - np.ones(n) * pw) / (n * pw * (1 - pw))
 
-# 待重构
 def Mahalanobis_distance(Xs, Ws):
     
-    cov_X = Xs.cov
+    cov_X = Xs.cov()
+    # print("cov_X:{0}".format(is_positive_definite(cov_X)))
+    # print("cov_X's inverse:{0}".format(is_positive_definite(sc.linalg.pinv(cov_X))))
     n = len(Ws)
     pw = np.sum(Ws) / n
-    diff_T_C = Xs @ (Ws - np.ones(n) * pw) / (n * pw * (1 - pw)) # 存在bug
-    print(diff_T_C.shape)
-    print(cov_X.shape)
+    diff_T_C = Xs.T @ (Ws - np.ones(n) * pw) / (n * pw * (1 - pw)) 
+    # print("pw: {0}\ndiff_T_C: {1}".format(pw,diff_T_C))
     
-    try:
-        M = n*pw*(1-pw) * diff_T_C.T @ np.linalg.inv(cov_X) @ diff_T_C
-    except:
-        M = n*pw*(1-pw) / cov_X * np.dot(diff_T_C, diff_T_C)
+    # try:
+    M = n*pw*(1-pw) * diff_T_C.T @ sc.linalg.pinv(cov_X) @ diff_T_C
+    # except:
+    #     M = n*pw*(1-pw) / cov_X * np.dot(diff_T_C, diff_T_C)
 
     return M
 
-# 待重构
 def Ws_generator_rerandomization(Xs, a, ifPrint = True):
-    n = len(Xs)
-    Ws = Ws_generator_equal_size(n)
+    Ws = Ws_generator_equal_size(Xs)
     M = Mahalanobis_distance(Xs, Ws) # 如果使用了其他距离准则可以重写此语句
     while M > a:
-        Ws = Ws_generator_equal_size(n)
+        print("----- Unaccepted Rerandomization ----- ")
+        print("Ws: {0}".format(Ws))
+        print("Mahalanobis_distance = {0:.3f} \na = {1}".format(M, a))
+        Ws = Ws_generator_equal_size(Xs)
         M = Mahalanobis_distance(Xs, Ws)
+
     if ifPrint:
         print("----- Accepted Rerandomization ----- ")
-        print("Mahalanobis_distance = {0:.3f} \na = {1}".format(M, a))
+        print("Mahalanobis_distance = {0:.3f} \n threshold: a = {1}".format(M, a))
         print("Accepted Ws: {0}".format(Ws))
     return Ws
 
-# 待重构
-def Ws_generator_AAtest(Xs, alpha=0.05, ifPrint = True):
-    n = len(Xs)
+def Ws_generator_AAtest(Xs, alpha=0.1, ifPrint = True):
+    
+    rowNum = Xs.shape[0]
     flag = True
     while flag == True:
-        Ws = Ws_generator_equal_size(n)
-        Ws_0 = np.zeros(n)
-        Ys = Ys_generator(Xs, Ws_0)
-        Ys_T = [Ys[i] for i in range(n) if Ws[i] == 1]
-        Ys_C = [Ys[i] for i in range(n) if Ws[i] == 0]
+        Ws = Ws_generator_equal_size(Xs)
+        Ws_0 = np.zeros(rowNum)
+        Ys_0 = Ys_generator(Xs, Ws_0)['y']
+        Ys_T = [Ys_0[i] for i in range(rowNum) if Ws[i] == 1]
+        Ys_C = [Ys_0[i] for i in range(rowNum) if Ws[i] == 0]
         t_stat, p_value = stats.ttest_ind(Ys_T, Ys_C, equal_var=True)
         # 输出t统计量和p值
         if ifPrint:
@@ -112,28 +127,30 @@ def Ws_generator_AAtest(Xs, alpha=0.05, ifPrint = True):
             return Ws
 
 # 待重构
-def randomization_output_plot(Xs, Ws, figsize=(12, 5)):
+def randomization_output_plot(df, figsize=(12, 5)):
 
-    n = len(Xs)
+    Ys = df['y']
+    Ws = df['w']
+    rowNum = df.shape[0]
     plt.figure(figsize=figsize)
-    plt.xticks(range(n))
+    # plt.xticks(range(rowNum))
     # plt.yticks(range(-8, 9))
-    plt.title('your title')
+    plt.title('Ys: treatment vs control')
     plt.xlabel('index')
-    plt.ylabel('Xs')
+    plt.ylabel('Ys')
 
     # color = ['red' if x == 1 else 'black' for x in Ws]
     # print(color)
-    index_treatment = [i for i in range(n) if Ws[i] == 1]
-    Xs_treatment = Xs[index_treatment]
-    index_control = [i for i in range(n) if Ws[i] == 0]
-    Xs_control = Xs[index_control]
+    index_treatment = [i for i in range(rowNum) if Ws[i] == 1]
+    Ys_treatment = Ys[index_treatment]
+    index_control = [i for i in range(rowNum) if Ws[i] == 0]
+    Ys_control = Ys[index_control]
 
 
-    plt.scatter(index_treatment, Xs_treatment,  color='red', label = 'treatment')
+    plt.scatter(index_treatment, Ys_treatment,  color='red', label = 'treatment')
     plt.legend()
 
-    plt.scatter(index_control, Xs_control,  color='black', label = 'controled')
+    plt.scatter(index_control, Ys_control,  color='black', label = 'controled')
     plt.legend()
 
     plt.axhline(y=0, color='grey', linestyle='--', linewidth = 0.7)

@@ -28,7 +28,7 @@ def Xs_generator(rowNum, colNum):
     return df
 
 
-def Ys_generator(Xs, Ws, tau=0.8, desired_norm = 10):
+def Ys_generator(Xs, Ws, tau=1, desired_norm = 10):
 
     df = Xs.copy()
     rowNum, colNum = df.shape
@@ -59,17 +59,17 @@ def Ws_generator_equal_size(Xs):
 
     return vector
 
-def tau_hat_calculator(df, Ws):
+def tau_hat_calculator(df):
     Ys = df['y']
+    Ws = df['w']
     return (Ys @ Ws) / np.sum(Ws) - (Ys @ (1 - Ws)) / np.sum(1 - Ws)
 
 
-# # 待重构
-# def diff_T_C_calculator(Xs, Ws):
-#     cov_X = np.cov(Xs)
-#     n = len(Ws)
-#     pw = np.sum(Ws) / n
-#     return Xs.T @ (Ws - np.ones(n) * pw) / (n * pw * (1 - pw))
+
+def diff_T_C_calculator(Xs, Ws):
+    n = len(Ws)
+    pw = np.sum(Ws) / n
+    return Xs.T @ (Ws - np.ones(n) * pw) / (n * pw * (1 - pw))
 
 def Mahalanobis_distance(Xs, Ws):
     
@@ -92,12 +92,12 @@ def Ws_generator_rerandomization(Xs, a, ifPrint = True):
     Ws = Ws_generator_equal_size(Xs)
     M = Mahalanobis_distance(Xs, Ws) # 如果使用了其他距离准则可以重写此语句
     while M > a:
-        print("----- Unaccepted Rerandomization ----- ")
-        print("Ws: {0}".format(Ws))
-        print("Mahalanobis_distance = {0:.3f} \na = {1}".format(M, a))
+        if ifPrint:
+            print("----- Unaccepted Rerandomization ----- ")
+            print("Ws: {0}".format(Ws))
+            print("Mahalanobis_distance = {0:.3f} \na = {1}".format(M, a))
         Ws = Ws_generator_equal_size(Xs)
         M = Mahalanobis_distance(Xs, Ws)
-
     if ifPrint:
         print("----- Accepted Rerandomization ----- ")
         print("Mahalanobis_distance = {0:.3f} \n threshold: a = {1}".format(M, a))
@@ -126,8 +126,7 @@ def Ws_generator_AAtest(Xs, alpha=0.1, ifPrint = True):
             flag = False
             return Ws
 
-# 待重构
-def randomization_output_plot(df, figsize=(12, 5)):
+def randomization_output_plot(df, figsize=(18, 5)):
 
     Ys = df['y']
     Ws = df['w']
@@ -156,34 +155,41 @@ def randomization_output_plot(df, figsize=(12, 5)):
     plt.axhline(y=0, color='grey', linestyle='--', linewidth = 0.7)
     plt.show()
 
-# 待重构
+
 def Xs_clarify(df, clarify_crition):
 
+    df_new = df.copy()
     for key_item, key_value in clarify_crition.items():
-        df[key_item] = df[key_item].apply(lambda x: '>{0:.2f}'.format(key_value) if x > key_value else '<{0:.2f}'.format(key_value))
+        df_new[key_item] = df_new[key_item].apply(lambda x: '>{0:.2f}'.format(key_value) if x > key_value else '<{0:.2f}'.format(key_value))
     
-    return df
+    return df_new
 
-# 待重构
 def Ws_generator_stratified(Xs, clarify_crition, n_groups=2):
 
-    df = pd.DataFrame({'ID': range(1, len(Xs)+1), 'Xs': Xs})
-    
+    # df = pd.DataFrame({'ID': range(1, len(Xs)+1), 'Xs': Xs})
+    df = Xs.copy()
+    df['ID'] = range(1, len(Xs)+1)
     df = Xs_clarify(df, clarify_crition)
     
-    stratify_cols = df.columns.tolist()
-    stratify_cols.pop(0)
+    # stratify_cols = df.columns.tolist()
+    # stratify_cols.pop(0)
+    stratify_cols = list(clarify_crition.keys())
     # 创建一个空的DataFrame来保存分层随机化的结果
     stratified_df = pd.DataFrame(columns=df.columns.tolist() + ['Group'])
     
     # 对于每个层次组合，进行随机分组
-    for _, group in df.groupby(stratify_cols):
+    for key, group in df.groupby(stratify_cols):
+        # print(key)
         # 随机生成分组信息
-        group['Group'] = np.random.choice(range(0, n_groups), len(group), replace=True)
+        group_new = group.copy()
+        group_new['Group'] = np.random.choice(range(0, n_groups), len(group), replace=True)
+        # res_group = np.random.choice(range(0, n_groups), len(group), replace=True)
+        # res_group = pd.DataFrame({'Group': res_group})
+        # group = pd.concat([group, res_group], axis=1)
         # print(group)
         
         # 将分组信息追加到结果DataFrame中
-        stratified_df = pd.concat([stratified_df, group])
+        stratified_df = pd.concat([stratified_df, group_new])
         res = stratified_df.sort_values(by='ID', ascending=True)
 
     return res['Group'].tolist()

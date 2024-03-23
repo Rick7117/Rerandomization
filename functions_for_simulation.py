@@ -88,7 +88,7 @@ def Mahalanobis_distance(Xs, Ws):
 
     return M
 
-def Ws_generator_rerandomization(Xs, a, ifPrint = True):
+def Ws_generator_rerandomization(Xs, a, ifPrint = False):
     Ws = Ws_generator_equal_size(Xs)
     M = Mahalanobis_distance(Xs, Ws) # 如果使用了其他距离准则可以重写此语句
     while M > a:
@@ -104,7 +104,7 @@ def Ws_generator_rerandomization(Xs, a, ifPrint = True):
         print("Accepted Ws: {0}".format(Ws))
     return Ws
 
-def Ws_generator_AAtest(Xs, alpha=0.1, ifPrint = True):
+def Ws_generator_AAtest(Xs, alpha=0.1, ifPrint = False):
     
     rowNum = Xs.shape[0]
     flag = True
@@ -120,9 +120,11 @@ def Ws_generator_AAtest(Xs, alpha=0.1, ifPrint = True):
             print(f"t-statistic: {t_stat}, p-value: {p_value}") 
         # 判断p值是否小于置信水平
         if p_value < alpha:
-            print("拒绝原假设，即两个样本的均值不相等, Ws:{0}。".format(Ws))
+            if ifPrint:
+                print("拒绝原假设，即两个样本的均值不相等, Ws:{0}。".format(Ws))
         else:
-            print("不能拒绝原假设，即没有足够的证据表明两个样本的均值不相等。")
+            if ifPrint:
+                print("不能拒绝原假设，即没有足够的证据表明两个样本的均值不相等。")
             flag = False
             return Ws
 

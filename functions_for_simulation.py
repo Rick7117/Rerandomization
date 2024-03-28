@@ -157,6 +157,47 @@ def randomization_output_plot(df, figsize=(18, 5)):
     plt.axhline(y=0, color='grey', linestyle='--', linewidth = 0.7)
     plt.show()
 
+def tau_hat_boxplot(method, iterNum, *args):
+
+    Xs = args[0]
+
+    methodset = {
+        'AAtest': Ws_generator_AAtest,
+        'block randomization': Ws_generator_block,
+        'stratified randomization': Ws_generator_stratified,
+        'rerandomization': Ws_generator_rerandomization
+    }
+    
+    tau_hats = []
+    for i in range(iterNum):
+        Ws = Ws_generator_equal_size(Xs)
+        df = Ys_generator(Xs, Ws)
+        tau_hats.append(tau_hat_calculator(df))
+
+    tau_hats_method = []
+    for i in range(iterNum):
+        if method in methodset:
+            Ws = methodset[method](*args)
+        else:
+            print('Function not found')
+        df = Ys_generator(Xs, Ws)
+        tau_hats_method.append(tau_hat_calculator(df))
+    
+    # boxplot
+    plt.boxplot([tau_hats, tau_hats_method])
+    plt.xticks([1, 2], ['tau_hats', 'tau_hats_{0:s}'.format(method)])
+    plt.title('Boxplot of tau_hat')
+
+    # plt.axhline(y=3, color='blue', linestyle='--')
+    plt.axhline(y=1, color='blue', linestyle='--', linewidth = 0.7)
+
+    # add axis label
+    plt.ylabel('tau')
+
+    print('----------------------------')
+    print('The variance of tau_hat:{0:.3f}'.format(np.var(tau_hats)))
+    print('The variance of tau_hat_{0:s}:{1:.3f}'.format(method, np.var(tau_hats_method)))
+
 
 def Xs_clarify(df, clarify_crition):
 
@@ -196,7 +237,28 @@ def Ws_generator_stratified(Xs, clarify_crition, n_groups=2):
 
     return res['Group'].tolist()
 
+
+def Ws_generator_block(Xs, block_size):
+    # 对DataFrame进行排序
+    df_sorted = Xs.sort_values(by=list(Xs.columns))
+    
+    # 计算需要多少个块
+    num_blocks = len(df_sorted) // block_size
+    
+    # 创建一个空的结果list
+    result = [0] * len(df_sorted)
+    
+    # 对每个块进行随机化
+    for i in range(num_blocks):
+        block = df_sorted[i*block_size : (i+1)*block_size]
+        block_index = block.index.tolist()
+        np.random.shuffle(block_index)
         
+        # 标记每个随机化的块
+        for j in range(block_size):
+            result[block_index[j]] = i % 2
+            
+    return result
 
 
 

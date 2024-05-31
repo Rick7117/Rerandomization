@@ -246,17 +246,22 @@ def tau_hat_boxplot(method, iterNum, *args):
             df = Ys_generator(Xs, Ws)
             tau_hats_method.append(tau_hat_calculator(df))
     else:
-        print('Function not found')        
+        print('Function not found') 
+
     # boxplot
-    plt.boxplot([tau_hats, tau_hats_method])
-    plt.xticks([1, 2], ['tau_hats', 'tau_hats_{0:s}'.format(method)])
+    # sns.set_theme(style='whitegrid')
+    # plt.figure(figsize=(18, 6))
+
+    ax = plt.boxplot([tau_hats, tau_hats_method])
+    # ax.set_xticklabels(ax.get_xticklabels(), fontsize=14, fontweight='bold')
+    plt.xticks([1, 2], ['tau_hat', 'tau_hat_{0:s}'.format(method)])
     plt.title('Boxplot of tau_hat')
 
-    # plt.axhline(y=3, color='blue', linestyle='--')
-    plt.axhline(y=1, color='blue', linestyle='--', linewidth = 0.7)
+    plt.axhline(y=3, color='blue', linestyle='--')
+    # plt.axhline(y=1, color='blue', linestyle='--', linewidth = 0.7)
 
     # add axis label
-    plt.ylabel('tau')
+    plt.ylabel(r"$\mathbf{\hat{\tau}}$", rotation=0,labelpad=10,fontsize=15, color='darkred')
 
     print('----------------------------')
     print('The variance of tau_hat:{0:.3f}'.format(np.var(tau_hats)))
@@ -289,37 +294,6 @@ def Ws_generator_stratified(Xs, clarify_crition):
     return np.array(Ws)
         
 
-# def Ws_generator_stratified(Xs, clarify_crition, n_groups=2):
-
-#     # df = pd.DataFrame({'ID': range(1, len(Xs)+1), 'Xs': Xs})
-#     df = Xs.copy()
-#     df['ID'] = range(1, len(Xs)+1)
-#     df = Xs_clarify(df, clarify_crition)
-    
-#     # stratify_cols = df.columns.tolist()
-#     # stratify_cols.pop(0)
-#     stratify_cols = list(clarify_crition.keys())
-#     # 创建一个空的DataFrame来保存分层随机化的结果
-#     stratified_df = pd.DataFrame(columns=df.columns.tolist() + ['Group'])
-    
-#     # 对于每个层次组合，进行随机分组
-#     for key, group in df.groupby(stratify_cols):
-#         # print(key)
-#         # 随机生成分组信息
-#         group_new = group.copy()
-#         group_new['Group'] = np.random.choice(range(0, n_groups), len(group), replace=True)
-#         # res_group = np.random.choice(range(0, n_groups), len(group), replace=True)
-#         # res_group = pd.DataFrame({'Group': res_group})
-#         # group = pd.concat([group, res_group], axis=1)
-#         # print(group)
-        
-#         # 将分组信息追加到结果DataFrame中
-#         stratified_df = pd.concat([stratified_df, group_new])
-#         res = stratified_df.sort_values(by='ID', ascending=True)
-
-#     return res['Group'].tolist()
-
-
 def Ws_generator_block(Xs, num_blocks=2):
     # 假设df是您的dataframe，其中每行是一个样本。
 
@@ -343,26 +317,6 @@ def Ws_generator_block(Xs, num_blocks=2):
     # randomized_df = pd.DataFrame(block_assignment, columns=['Group Assignment'])
 
     return np.array(block_assignment)
-    # # 对DataFrame进行排序
-    # df_sorted = Xs.sort_values(by=list(Xs.columns))
-    
-    # # 计算需要多少个块
-    # num_blocks = len(df_sorted) // block_size
-    
-    # # 创建一个空的结果list
-    # result = [0] * len(df_sorted)
-    
-    # # 对每个块进行随机化
-    # for i in range(num_blocks):
-    #     block = df_sorted[i*block_size : (i+1)*block_size]
-    #     block_index = block.index.tolist()
-    #     np.random.shuffle(block_index)
-        
-    #     # 标记每个随机化的块
-    #     for j in range(block_size):
-    #         result[block_index[j]] = i % 2
-            
-    # return np.array(result, dtype=np.float64)
 
 
 
